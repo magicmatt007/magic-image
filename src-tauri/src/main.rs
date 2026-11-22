@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    image_magic_lib::run()
+    magic_image_lib::run()
 }

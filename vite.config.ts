@@ -35,8 +35,8 @@ export default defineConfig(({ mode }) => ({
       registerType: 'prompt',
       includeAssets: ['icon.svg', 'icon-web.svg'],
       manifest: {
-        name: 'image-magic Web',
-        short_name: 'image-magic Web',
+        name: 'magic-image Web',
+        short_name: 'magic-image Web',
         description: 'Lightweight image annotator for screenshots and pictures',
         theme_color: '#1b1f27',
         background_color: '#1b1f27',

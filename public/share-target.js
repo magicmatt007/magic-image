@@ -1,5 +1,5 @@
 // Loaded into the service worker (see workbox.importScripts in vite.config.ts).
-// Receives images shared to the installed app, e.g. Android "Share → image-magic",
+// Receives images shared to the installed app, e.g. Android "Share → magic-image",
 // keeps the file in a cache for a moment, and opens the app, which picks it up.
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);

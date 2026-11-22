@@ -1,6 +1,8 @@
-# image-magic
+# magic-image
 
-**Live app: https://magicmatt007.github.io/image-magic/**
+**Live app: https://magicmatt007.github.io/magic-image/**
+
+*Formerly called image-magic. The web app moved to the address above; the old one no longer works, so install it again from there. The Windows desktop app updates itself and removes the old image-magic install.*
 
 A lightweight image annotator for screenshots and pictures. It runs in any modern browser on Linux, Windows and macOS, and can be installed as a desktop app (PWA) that works offline.
 
@@ -33,7 +35,7 @@ Install it from Chrome on Android (**⋮ → Add to home screen** / **Install ap
 - Handles and hit areas are finger-sized, so even thin arrows are easy to grab at any zoom level.
 - **Compact layout:** one scrolling toolbar row (tools first). Colours and sizes open from the palette button.
 - Text gets a **Done** button, and the hints describe touch actions instead of keyboard shortcuts.
-- **Share into the app:** take a screenshot, tap **Share → image-magic**, annotate it, then use the app's **Share** button to send the result on (WhatsApp, email, Photos…). Save still downloads a copy. The app appears in the Share menu once it's installed; if you installed it before this version, Android may take a while to pick up the change, and reinstalling makes it immediate.
+- **Share into the app:** take a screenshot, tap **Share → magic-image**, annotate it, then use the app's **Share** button to send the result on (WhatsApp, email, Photos…). Save still downloads a copy. The app appears in the Share menu once it's installed; if you installed it before this version, Android may take a while to pick up the change, and reinstalling makes it immediate.
 - The folder panel is hidden on phones, because phone browsers can't open folders. Open picks images from the gallery or files.
 
 ## Keyboard shortcuts
@@ -91,7 +93,7 @@ These features use the browser's File System Access API, which is available in *
 
 ## Offline use
 
-image-magic works without an internet connection:
+magic-image works without an internet connection:
 
 - **First visit:** the first time you open the app (online), a service worker stores all of its files (HTML, JavaScript, CSS and icons, about 270 KB) in the browser's cache.
 - **After that:** the app loads from that cache, online or offline. This works in a normal browser tab as well as in the installed desktop app.
@@ -107,12 +109,12 @@ Some company computers block websites from writing files, so the web app can onl
 
 - **Save (Ctrl+S) overwrites the original file** directly, in its own format. Save as writes anywhere.
 - **Open folder** opens any folder with the native dialog. The folder panel (search, sort, Page Up/Down) works the same, and the folder is reopened on the next start.
-- **Open with:** the installer registers image-magic for PNG, JPEG, WebP, GIF and BMP files. Dropping files or folders onto the window works too.
+- **Open with:** the installer registers magic-image for PNG, JPEG, WebP, GIF and BMP files. Dropping files or folders onto the window works too.
 - Closing the window with unsaved changes asks first.
 
-**Download** it from the [Releases page](https://github.com/magicmatt007/image-magic/releases):
-- `image-magic_<version>_x64-setup.exe` installs for your user account only (no admin rights needed).
-- `image-magic-portable.exe` runs without installing anything.
+**Download** it from the [Releases page](https://github.com/magicmatt007/magic-image/releases):
+- `magic-image_<version>_x64-setup.exe` installs for your user account only (no admin rights needed).
+- `magic-image-portable.exe` runs without installing anything.
 
 The app isn't code-signed, so Windows SmartScreen may warn on first start: choose **More info → Run anyway**. On a company laptop, check that you're allowed to run your own software: IT may block unknown programs. Its status bar shows the version (with "desktop").
 
@@ -147,7 +149,7 @@ Every push to `main` deploys to GitHub Pages via `.github/workflows/deploy.yml`.
 
 ## Install as a desktop app
 
-Open the app in Chrome or Edge and click the install icon in the address bar (or choose **⋮ → Cast, save and share → Install page as app**). It then gets its own window and launcher icon, works offline, and appears in the OS "Open with" menu for image files. Safari on macOS: **File → Add to Dock**. Firefox can't install it, but the app works there in a normal tab. Installed this way it is called **image-magic Web** and has a teal/green icon, so it can be told apart from the Windows desktop app (**image-magic**, blue/purple icon).
+Open the app in Chrome or Edge and click the install icon in the address bar (or choose **⋮ → Cast, save and share → Install page as app**). It then gets its own window and launcher icon, works offline, and appears in the OS "Open with" menu for image files. Safari on macOS: **File → Add to Dock**. Firefox can't install it, but the app works there in a normal tab. Installed this way it is called **magic-image Web** and has a teal/green icon, so it can be told apart from the Windows desktop app (**magic-image**, blue/purple icon).
 
 ## Project layout
 
@@ -167,6 +169,6 @@ The project is built with Vite, TypeScript, [Konva](https://konvajs.org/) and vi
 
 Copyright (C) 2026 magicmatt007
 
-image-magic is free software: you can redistribute it and/or modify it under the terms of the [GNU Affero General Public License](LICENSE) as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. Anyone may use it, including at work. If you distribute a modified version, or run one as a website, you must publish its full source code under the same licence.
+magic-image is free software: you can redistribute it and/or modify it under the terms of the [GNU Affero General Public License](LICENSE) as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. Anyone may use it, including at work. If you distribute a modified version, or run one as a website, you must publish its full source code under the same licence.
 
-image-magic is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the [LICENSE](LICENSE) file for details.
+magic-image is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the [LICENSE](LICENSE) file for details.

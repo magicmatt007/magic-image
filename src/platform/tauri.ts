@@ -243,7 +243,7 @@ export async function initDesktop(files: Session) {
           version: update.version,
           install: async () => {
             if (!(await files.confirmDiscard())) return;
-            toast(`Downloading image-magic ${update.version}…`);
+            toast(`Downloading magic-image ${update.version}…`);
             await update.downloadAndInstall();
             // Windows closes the app to run the installer; elsewhere restart.
             const { relaunch } = await import('@tauri-apps/plugin-process');

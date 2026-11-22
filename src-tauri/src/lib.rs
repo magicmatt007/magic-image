@@ -1,4 +1,4 @@
-//! Native side of the image-magic desktop app.
+//! Native side of the magic-image desktop app.
 //!
 //! The web frontend (shared with the browser version) talks to the file system
 //! only through these few commands, via `src/platform/tauri.ts`. Nothing here
@@ -65,7 +65,7 @@ pub fn write_atomic(path: &Path, data: &[u8]) -> io::Result<()> {
     let name = path
         .file_name()
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "path has no file name"))?;
-    let tmp = dir.join(format!(".{}.image-magic-tmp", name.to_string_lossy()));
+    let tmp = dir.join(format!(".{}.magic-image-tmp", name.to_string_lossy()));
     fs::write(&tmp, data)?;
     // On Windows, rename replaces an existing file (MoveFileEx with REPLACE_EXISTING).
     fs::rename(&tmp, path).inspect_err(|_| {
@@ -160,7 +160,7 @@ pub fn run() {
             is_installed
         ])
         .run(tauri::generate_context!())
-        .expect("error while running image-magic");
+        .expect("error while running magic-image");
 }
 
 #[cfg(test)]

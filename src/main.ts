@@ -147,7 +147,7 @@ ed.onChange(() => {
   empty.hidden = !!ed.base;
   workspace.classList.toggle('has-image', !!ed.base);
   const dirty = ed.dirty;
-  document.title = ed.base ? `${dirty ? '● ' : ''}${files.name || 'image'} – image-magic` : 'image-magic';
+  document.title = ed.base ? `${dirty ? '● ' : ''}${files.name || 'image'} – magic-image` : 'magic-image';
   status.replaceChildren();
   const ver = document.createElement('span');
   if (ed.base) {
@@ -156,7 +156,7 @@ ed.onChange(() => {
     info.textContent = parts.join(' · ') + (dirty ? ' · unsaved' : '');
     // Phones hide the version label; tapping the picture info shows it.
     info.addEventListener('click', () => {
-      if (getComputedStyle(ver).display === 'none') toast(`image-magic ${ver.textContent}`);
+      if (getComputedStyle(ver).display === 'none') toast(`magic-image ${ver.textContent}`);
     });
     const hint = document.createElement('span');
     hint.className = 'hint';

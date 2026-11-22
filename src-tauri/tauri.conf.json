@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "image-magic",
+  "productName": "magic-image",
   "version": "../package.json",
   "identifier": "io.github.magicmatt007.imagemagic",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "image-magic",
+        "title": "magic-image",
         "width": 1280,
         "height": 800,
         "minWidth": 480,
@@ -94,7 +94,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU2MkExMkM5NTlBREIyMDQKUldRRXNxMVp5UklxVnExNzVrYXM1S244TFJZMkkwbW04RTlNZ29INkF3T05TYzZ2SU1PN2k2SVUK",
       "endpoints": [
-        "https://github.com/magicmatt007/image-magic/releases/latest/download/latest.json"
+        "https://github.com/magicmatt007/magic-image/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "passive"

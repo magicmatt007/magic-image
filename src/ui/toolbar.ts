@@ -131,7 +131,7 @@ export function buildToolbar(el: HTMLElement, ed: Editor, act: Actions) {
 
   const brand = document.createElement('div');
   brand.className = 'brand';
-  brand.innerHTML = '<img src="./icon.svg" alt="" width="22" height="22"><span>image-magic</span>';
+  brand.innerHTML = '<img src="./icon.svg" alt="" width="22" height="22"><span>magic-image</span>';
 
   el.append(
     brand,

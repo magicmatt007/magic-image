@@ -52,6 +52,8 @@ const errText = (e: unknown) => {
 };
 
 // ------------------------------------------------- remembered folder (IndexedDB)
+// Storage names keep the app's old name (image-magic), so settings and the
+// remembered folder survive the rename to magic-image.
 const DB = 'image-magic', STORE = 'kv';
 function idb<T>(fn: (s: IDBObjectStore) => IDBRequest<T>, mode: IDBTransactionMode): Promise<T> {
   return new Promise((resolve, reject) => {
