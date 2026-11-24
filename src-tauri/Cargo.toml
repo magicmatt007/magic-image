@@ -1,6 +1,6 @@
 [package]
 name = "magic-image"
-version = "0.8.3"
+version = "0.8.4"
 description = "Lightweight image annotator for screenshots and pictures"
 edition = "2021"
 license = "AGPL-3.0-or-later"
