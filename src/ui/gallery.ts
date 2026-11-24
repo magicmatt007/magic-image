@@ -166,11 +166,19 @@ export function buildGallery(ed: Editor, files: FileSession, onQueryChange: () =
     const visible = files.visible;
     const total = files.entries.length;
     count.textContent = files.query ? `${visible.length} of ${total} images` : `${total} image${total === 1 ? '' : 's'}`;
+    if (files.loading) count.textContent = total ? `${count.textContent} · updating…` : '';
 
     const focusedName = (document.activeElement as HTMLElement | null)?.dataset?.name;
     grid.replaceChildren();
     if (!visible.length) {
-      grid.append(el('p', 'gallery-empty', files.query ? `No images match “${files.query}”.` : files.loading ? 'Reading folder…' : 'No images in this folder.'));
+      if (files.loading && !files.query) {
+        const box = el('div', 'panel-loading gallery-empty');
+        box.setAttribute('role', 'status');
+        box.append(el('span', 'spinner'), el('span', '', files.progressText));
+        grid.append(box);
+      } else {
+        grid.append(el('p', 'gallery-empty', files.query ? `No images match “${files.query}”.` : 'No images in this folder.'));
+      }
       return;
     }
     // Date headings only make sense when the list is in date order.

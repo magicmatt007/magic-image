@@ -6,6 +6,7 @@
 import type { Editor } from './editor';
 import { blobToCanvas, downloadBlob, encode, formatFor, type Format } from './io';
 import { platform } from './platform/hooks';
+import { pruneThumbs } from './ui/thumbs';
 import { toast } from './ui/toast';
 
 type Perm = 'granted' | 'denied' | 'prompt';
@@ -89,7 +90,21 @@ export interface FileEntry {
   modified: number;
   handle?: FileSystemFileHandle;
   file?: File;
+  /** Folder it is in. Entries remembered from last time have no handle yet: it is looked up here. */
+  dir?: FileSystemDirectoryHandle;
 }
+
+/** The entry's file handle, looked up in its folder when not known yet. */
+export async function entryHandle(e: FileEntry) {
+  return (e.handle ??= await e.dir!.getFileHandle(e.name));
+}
+
+/** The folder's list as remembered from last time (names and dates only). */
+interface SavedListing {
+  folder: string;
+  entries: { name: string; modified: number }[];
+}
+const LISTING_KEY = 'listing';
 
 export class FileSession {
   /** File currently being edited (null for pasted/dropped-without-handle images). */
@@ -299,8 +314,13 @@ export class FileSession {
     }
   }
 
-  openEntry(e: FileEntry) {
-    return e.handle ? this.openHandle(e.handle) : this.openFile(e.file!);
+  async openEntry(e: FileEntry) {
+    if (e.file) return this.openFile(e.file);
+    try {
+      return this.openHandle(await entryHandle(e));
+    } catch (err) {
+      toast(`Could not open ${e.name} (${errText(err)})`, 'error');
+    }
   }
 
   /** Close the open picture (asks first about unsaved changes). */
@@ -406,6 +426,7 @@ export class FileSession {
     this.query = '';
     if (platform.rememberDir) platform.rememberDir(dir);
     else idbSet('lastDir', dir);
+    await this.showSavedListing(dir);
     await this.refresh();
     // Open the newest image if nothing is being edited yet.
     if (openNewest && !this.ed.base && this.entries.length) await this.openEntry(this.visible[0]);
@@ -422,6 +443,7 @@ export class FileSession {
     if (await hasPermission(dir, 'read', false)) {
       this.dir = dir;
       this.folderName = dir.name;
+      await this.showSavedListing(dir);
       const done = this.refresh();
       onConnected?.();
       await done;
@@ -459,6 +481,14 @@ export class FileSession {
   loading = false;
   /** Images found so far while loading, and how many have their date read. */
   progress = { found: 0, dated: 0 };
+
+  /** "Reading folder… 120 of 495 images", for while the list is still empty. */
+  get progressText() {
+    const { found, dated } = this.progress;
+    if (!found) return 'Reading folder…';
+    if (!dated) return `Reading folder… ${found} images found`;
+    return `Reading folder… ${dated} of ${found} images`;
+  }
   private reading: { dir: FileSystemDirectoryHandle; done: Promise<void> } | null = null;
 
   /** Re-read the folder (order and filtering happen in `visible`). */
@@ -483,14 +513,24 @@ export class FileSession {
     const progress = { found: 0, dated: 0 };
     this.progress = progress;
     this.emit();
-    // Re-render at most a few times a second while counting.
+    // Dates already known (this session or last time): on Android each lookup
+    // is a slow round trip, so only new files are looked up. A file saved by
+    // this app updates its date itself (see touch()).
+    const known = new Map<string, number>();
+    const saved = await idbGet<SavedListing>(LISTING_KEY);
+    if (saved?.folder === dir.name) for (const e of saved.entries) known.set(e.name, e.modified);
+    // The list on screen is newer still (it is this folder's, or empty).
+    for (const e of this.entries) known.set(e.name, e.modified);
+    // Re-render at most a few times a second while counting (not while the
+    // remembered list is showing: it stays as it is until the read is done).
     let shown = performance.now();
     const tick = () => {
-      if (performance.now() - shown < 250 || !current()) return;
+      if (performance.now() - shown < 250 || !current() || this.entries.length) return;
       shown = performance.now();
       this.emit();
     };
     const list: FileEntry[] = [];
+    let failed = false;
     try {
       const handles: FileSystemFileHandle[] = [];
       for await (const h of dir.values()) {
@@ -507,7 +547,7 @@ export class FileSession {
       const worker = async () => {
         while (next < handles.length && current()) {
           const fh = handles[next++];
-          let modified = (fh as { lastModifiedMs?: number }).lastModifiedMs;
+          let modified = (fh as { lastModifiedMs?: number }).lastModifiedMs ?? known.get(fh.name);
           try {
             modified ??= (await fh.getFile()).lastModified;
           } catch {
@@ -515,7 +555,7 @@ export class FileSession {
           }
           // Keep the handle we are editing, so isSameEntry checks stay cheap.
           const same = this.handle?.name === fh.name && (await this.handle.isSameEntry(fh));
-          list.push({ name: fh.name, handle: same ? this.handle! : fh, modified });
+          list.push({ name: fh.name, handle: same ? this.handle! : fh, modified, dir });
           progress.dated++;
           tick();
         }
@@ -523,11 +563,35 @@ export class FileSession {
       await Promise.all(Array.from({ length: 8 }, worker));
     } catch (e) {
       if (current()) toast(`Could not read the folder (${errText(e)})`, 'error');
+      failed = true;
     }
     if (!current()) return this.readAbandoned(dir);
     this.entries = list;
     this.loading = false;
+    // An incomplete list is shown, but not remembered or used for clean-up.
+    if (!failed) {
+      this.saveListing();
+      pruneThumbs(dir.name, list);
+    }
     this.emit();
+  }
+
+  /** Show last time's list right away; the next read brings it up to date. */
+  private async showSavedListing(dir: FileSystemDirectoryHandle) {
+    const saved = await idbGet<SavedListing>(LISTING_KEY);
+    if (saved?.folder !== dir.name || this.dir !== dir || this.entries.length) return;
+    this.entries = saved.entries.map((e) => ({ ...e, dir }));
+    this.emit();
+  }
+
+  /** Remember the list (names and dates) for a quick start next time. */
+  private saveListing() {
+    if (!this.dir || this.basic) return;
+    const listing: SavedListing = {
+      folder: this.dir.name,
+      entries: this.entries.map(({ name, modified }) => ({ name, modified })),
+    };
+    idbSet(LISTING_KEY, listing);
   }
 
   /** A read that was overtaken: the newer read (if any) reports when done. */
@@ -637,6 +701,7 @@ export class FileSession {
     const e = this.entries.find((x) => x.handle === h);
     if (e) e.modified = Date.now();
     this.visibleCache = null; // the date sort may change
+    this.saveListing();
     this.emit();
   }
 }

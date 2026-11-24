@@ -1,6 +1,6 @@
-import type { FileEntry } from '../files';
+import { entryHandle, type FileEntry } from '../files';
 
-/** Thumbnail data URLs, shared by the folder panel and the gallery. */
+/** Thumbnail URLs, shared by the folder panel and the gallery. */
 const thumbCache = new Map<string, Promise<string>>();
 /** Finished thumbnails, so re-renders show them immediately (no flicker). */
 const thumbReady = new Map<string, string>();
@@ -24,8 +24,34 @@ async function limited<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
+/**
+ * Thumbnails of folder images are also kept in the browser's cache storage, so
+ * the next start shows them at once instead of decoding every picture again.
+ */
+const STORE = 'image-magic-thumbs';
+const storeUrl = (folder: string, e: FileEntry) =>
+  `${location.origin}/__thumbs/${encodeURIComponent(folder)}/${encodeURIComponent(e.name)}/${e.modified}`;
+const folderPrefix = (folder: string) => `${location.origin}/__thumbs/${encodeURIComponent(folder)}/`;
+const openStore = () => (self.caches ? caches.open(STORE).catch(() => null) : Promise.resolve(null));
+
+async function storedThumb(e: FileEntry): Promise<string> {
+  if (!e.dir) return '';
+  const res = await (await openStore())?.match(storeUrl(e.dir.name, e)).catch(() => undefined);
+  return res ? URL.createObjectURL(await res.blob()) : '';
+}
+
+/** Forget stored thumbnails of pictures no longer in the folder (or changed). */
+export async function pruneThumbs(folder: string, entries: FileEntry[]) {
+  const store = await openStore();
+  if (!store) return;
+  const keep = new Set(entries.map((e) => storeUrl(folder, e)));
+  const prefix = folderPrefix(folder);
+  for (const req of await store.keys().catch(() => [] as readonly Request[]))
+    if (req.url.startsWith(prefix) && !keep.has(req.url)) store.delete(req).catch(() => {});
+}
+
 async function makeThumb(e: FileEntry): Promise<string> {
-  const file = e.file ?? (await e.handle!.getFile());
+  const file = e.file ?? (await (await entryHandle(e)).getFile());
   // Tall enough to stay sharp in the gallery's largest tiles.
   const bmp = await createImageBitmap(file, { resizeHeight: 240, resizeQuality: 'medium' });
   const c = document.createElement('canvas');
@@ -33,14 +59,23 @@ async function makeThumb(e: FileEntry): Promise<string> {
   c.height = bmp.height;
   c.getContext('2d')!.drawImage(bmp, 0, 0);
   bmp.close();
-  return c.toDataURL('image/jpeg', 0.8);
+  const blob = await new Promise<Blob | null>((r) => c.toBlob(r, 'image/jpeg', 0.8));
+  if (!blob) throw new Error('thumbnail could not be encoded');
+  if (e.dir) {
+    const res = new Response(blob, { headers: { 'content-type': 'image/jpeg' } });
+    (await openStore())?.put(storeUrl(e.dir.name, e), res).catch(() => {});
+  }
+  return URL.createObjectURL(blob);
 }
 
 export function thumbFor(e: FileEntry) {
   const key = thumbKey(e);
   let p = thumbCache.get(key);
   if (!p) {
-    p = limited(() => makeThumb(e))
+    // A stored thumbnail is quick to load, so it doesn't wait in the queue.
+    p = storedThumb(e)
+      .catch(() => '')
+      .then((stored) => stored || limited(() => makeThumb(e)))
       .then((src) => (thumbReady.set(key, src), src))
       .catch(() => '');
     thumbCache.set(key, p);

@@ -172,7 +172,7 @@ export function buildFilePanel(panel: HTMLElement, ed: Editor, files: FileSessio
       if (files.loading) {
         const box = el('div', 'panel-loading');
         box.setAttribute('role', 'status');
-        box.append(el('span', 'spinner'), el('span', '', loadingText()));
+        box.append(el('span', 'spinner'), el('span', '', files.progressText));
         panel.append(box);
       } else {
         panel.append(el('p', 'panel-note', 'No images in this folder.'));
@@ -190,13 +190,6 @@ export function buildFilePanel(panel: HTMLElement, ed: Editor, files: FileSessio
       search.focus();
       search.setSelectionRange(caret[0], caret[1]);
     }
-  }
-
-  function loadingText() {
-    const { found, dated } = files.progress;
-    if (!found) return 'Reading folder…';
-    if (!dated) return `Reading folder… ${found} images found`;
-    return `Reading folder… ${dated} of ${found} images`;
   }
 
   /** Rebuild only the list (and count) from the filtered, sorted entries. */
