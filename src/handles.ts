@@ -50,8 +50,8 @@ export class PointHandles {
     pts.forEach((pt, i) => {
       const c = new Konva.Circle({
         radius: r,
-        fill: pt.style === 'bend' ? '#1e88e5' : '#ffffff',
-        stroke: '#1e88e5',
+        fill: pt.style === 'bend' ? '#7c3aed' : '#ffffff',
+        stroke: '#7c3aed',
         strokeWidth: 2,
         hitStrokeWidth: coarsePointer ? 20 : 8,
         draggable: true,

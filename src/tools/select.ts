@@ -33,8 +33,8 @@ export function selectTool(ed: Editor): Tool {
       if (!additive) ed.select([]);
       start = p;
       marquee = new Konva.Rect({
-        fill: 'rgba(30,136,229,0.12)',
-        stroke: '#1e88e5',
+        fill: 'rgba(124,58,237,0.12)',
+        stroke: '#7c3aed',
         strokeWidth: 1,
         strokeScaleEnabled: false,
         listening: false,

@@ -124,7 +124,7 @@ export function cropTool(ed: Editor): CropTool {
         ignoreStroke: true,
         borderEnabled: false,
         anchorSize: coarsePointer ? 22 : 11,
-        anchorFill: '#1e88e5',
+        anchorFill: '#7c3aed',
         anchorStroke: '#ffffff',
       });
       rect.on('dragmove transform', normalize);

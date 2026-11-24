@@ -1,29 +1,74 @@
+/* Noto Sans, bundled with the app (no internet needed). SIL Open Font
+   License: public/licenses/NotoSans-OFL.txt
+   (shipped with the app as licenses/NotoSans-OFL.txt). */
+@font-face {
+  font-family: 'Noto Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(../fonts/noto-sans-latin-wght-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Noto Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(../fonts/noto-sans-latin-ext-wght-normal.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF,
+    U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* "magic apps" look, shared with magic-pdf: warm neutrals, one accent taken
+   from the app icon (violet), the icon's sparkle yellow only for tips. */
 :root {
-  --bg: #f4f5f7;
-  --bar: #ffffff;
-  --border: #dfe2e7;
-  --text: #1d2129;
-  --muted: #6b7280;
-  --hover: #eef0f3;
-  --accent: #1e88e5;
+  --bg: #faf8f5; /* window background */
+  --bar: #f3efea; /* toolbars, side panel, status bar */
+  --surface: #ffffff; /* fields, cards, dialogs, menus */
+  --btn: #e9e4dd; /* buttons at rest */
+  --hover: #e1dad0;
+  --pressed: #d6ccbf;
+  --border: #e1dad0;
+  --text: #1f1b16;
+  --muted: #6b6259;
+  --canvas-bg: #e4ded6;
+  --canvas-dots: #d6ccbf;
+  --accent: #7c3aed; /* solid fill: main action (Save, Open…) */
   --accent-text: #ffffff;
-  --canvas-bg: #e3e6eb;
-  --canvas-dots: #d4d8de;
-  --shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  --accent-tint: #ede9fe; /* selected tool or item */
+  --accent-tint-text: #5b21b6;
+  --link: #6d28d9;
+  --sparkle: #facc15;
+  --sparkle-mark: #ca8a04; /* small sparkle marks on light backgrounds */
+  --tip-bg: #fef3c7;
+  --tip-text: #713f12;
+  --radius: 8px; /* buttons, fields */
+  --radius-lg: 12px; /* panels, menus, dialogs */
+  --shadow: 0 6px 24px rgba(31, 27, 22, 0.14);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #15181e;
-    --bar: #1b1f27;
-    --border: #2c323d;
-    --text: #e6e8ec;
-    --muted: #9aa3b2;
-    --hover: #262c36;
-    --accent: #3b93f0;
-    --canvas-bg: #101318;
-    --canvas-dots: #1c2027;
+    --bg: #1a1714;
+    --bar: #211d19;
+    --surface: #2b2620;
+    --btn: #2e2923;
+    --hover: #38322b;
+    --pressed: #443c33;
+    --border: #3a342d;
+    --text: #f2eee8;
+    --muted: #a89f94;
+    --canvas-bg: #12100d;
+    --canvas-dots: #221e1a;
+    --accent-tint: #36295a;
+    --accent-tint-text: #c4b5fd;
+    --link: #a78bfa;
+    --sparkle-mark: #facc15;
+    --tip-bg: #3a2f12;
+    --tip-text: #fde68a;
     --shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
     color-scheme: dark;
   }
@@ -40,7 +85,7 @@ body {
   overflow: hidden;
   background: var(--bg);
   color: var(--text);
-  font: 14px/1.4 system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
+  font: 14px/1.4 'Noto Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
 }
 
 #app {
@@ -108,7 +153,7 @@ button {
   min-width: 34px;
   padding: 0 7px;
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: var(--radius);
   background: none;
 }
 
@@ -116,9 +161,14 @@ button {
   background: var(--hover);
 }
 
-.icon-btn.active {
-  background: var(--accent);
-  color: var(--accent-text);
+.icon-btn:active:not(:disabled) {
+  background: var(--pressed);
+}
+
+.icon-btn.active,
+.icon-btn.active:hover:not(:disabled) {
+  background: var(--accent-tint);
+  color: var(--accent-tint-text);
 }
 
 .icon-btn:disabled {
@@ -133,9 +183,10 @@ button.primary,
   border-color: transparent;
 }
 
-.icon-btn.primary:hover:not(:disabled) {
+.icon-btn.primary:hover:not(:disabled),
+.icon-btn.primary:active:not(:disabled) {
   background: var(--accent);
-  filter: brightness(1.08);
+  filter: brightness(1.1);
 }
 
 .icon-btn span {
@@ -147,7 +198,7 @@ button.primary,
   min-width: 54px;
   height: 30px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: none;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
@@ -183,7 +234,7 @@ button.primary,
   margin-left: 4px;
   padding: 0;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: none;
   cursor: pointer;
 }
@@ -251,9 +302,9 @@ button.primary,
   max-width: 460px;
   padding: 36px 32px;
   text-align: center;
-  background: var(--bar);
+  background: var(--surface);
   border: 2px dashed var(--border);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
 }
 
 .empty-card h1 {
@@ -276,9 +327,9 @@ button.primary,
 .empty-actions button,
 dialog button {
   padding: 8px 14px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bar);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--btn);
 }
 
 .empty-actions button:hover,
@@ -286,11 +337,22 @@ dialog button:hover {
   background: var(--hover);
 }
 
+.empty-actions button:active,
+dialog button:active {
+  background: var(--pressed);
+}
+
 .empty-actions button.primary,
 dialog button.primary {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-text);
+  font-weight: 600;
+}
+
+.empty-actions button.primary:hover,
+dialog button.primary:hover {
+  filter: brightness(1.1);
 }
 
 kbd {
@@ -307,11 +369,11 @@ kbd {
   display: none;
   place-items: center;
   border: 3px dashed var(--accent);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   font-size: 20px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--link);
   pointer-events: none;
 }
 
@@ -344,24 +406,29 @@ kbd {
   align-items: center;
   gap: 8px;
   padding: 6px 6px 6px 14px;
-  background: var(--bar);
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
   font-variant-numeric: tabular-nums;
 }
 
 .crop-bar button {
   padding: 6px 12px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--bar);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--btn);
+}
+
+.crop-bar button:hover:not(:disabled) {
+  background: var(--hover);
 }
 
 .crop-bar button.primary {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-text);
+  font-weight: 600;
 }
 
 .crop-bar button:disabled {
@@ -391,15 +458,15 @@ kbd {
 /* ---------------------------------------------------------------- dialog */
 dialog {
   border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--bar);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
   color: var(--text);
   box-shadow: var(--shadow);
   padding: 20px 22px;
 }
 
 dialog::backdrop {
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(31, 27, 22, 0.4);
 }
 
 dialog h2 {
@@ -431,8 +498,8 @@ dialog input[type='number'] {
   width: 110px;
   padding: 6px 8px;
   border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--bg);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 
 dialog .presets button {
@@ -455,16 +522,32 @@ dialog .presets button {
 }
 
 .toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 8px 14px;
-  border-radius: 8px;
-  background: #222831;
-  color: #fff;
+  border-radius: var(--radius-lg);
+  background: var(--tip-bg);
+  color: var(--tip-text);
   box-shadow: var(--shadow);
   transition: opacity 0.35s;
 }
 
 .toast.error {
   background: #b3261e;
+  color: #fff;
+}
+
+/* The sparkle: a "magic" mark, kept to one on screen at a time. */
+.spark {
+  flex: none;
+  color: var(--sparkle-mark);
+}
+
+.toast.error .spark,
+.toast ~ .toast .spark,
+body:has(#save-tip[open]) .toast .spark {
+  display: none;
 }
 
 .toast.out {
@@ -555,12 +638,16 @@ dialog .presets button {
 .panel-empty button {
   margin: 0 12px;
   padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bar);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--btn);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.panel-empty button:hover {
+  background: var(--hover);
 }
 
 .panel-empty button.primary {
@@ -582,7 +669,7 @@ dialog .presets button {
   width: 100%;
   padding: 6px;
   border: 2px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: none;
   text-align: left;
 }
@@ -592,8 +679,13 @@ dialog .presets button {
 }
 
 .file-item.current {
-  border-color: var(--accent);
-  background: var(--hover);
+  border-color: var(--accent-tint);
+  background: var(--accent-tint);
+  color: var(--accent-tint-text);
+}
+
+.file-item.current .file-time {
+  color: inherit;
 }
 
 .file-item img {
@@ -619,7 +711,7 @@ dialog .presets button {
 
 .dirty-dot {
   margin-right: 4px;
-  color: var(--accent);
+  color: var(--link);
 }
 
 .file-time {
@@ -666,6 +758,19 @@ dialog p {
   margin: 0 0 10px;
 }
 
+#save-tip .tip-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#save-tip .tip-box {
+  padding: 10px 12px;
+  border-radius: var(--radius-lg);
+  background: var(--tip-bg);
+  color: var(--tip-text);
+}
+
 #save-tip .muted {
   color: var(--muted);
   font-size: 13px;
@@ -680,7 +785,7 @@ dialog p {
   flex: 1;
   padding: 7px 10px;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--radius);
   background: var(--bg);
   font: 13px ui-monospace, monospace;
   user-select: all;
@@ -698,7 +803,7 @@ dialog p {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--accent);
+  color: var(--link);
   font: inherit;
   text-decoration: underline;
 }
@@ -735,8 +840,8 @@ dialog p {
   min-width: 0;
   padding: 6px 8px;
   border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--bg);
+  border-radius: var(--radius);
+  background: var(--surface);
   font-size: 13px;
 }
 
@@ -773,7 +878,7 @@ dialog p {
   z-index: 6;
   padding: 6px 14px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--accent);
   color: var(--accent-text);
   font-weight: 600;
@@ -876,6 +981,7 @@ dialog.gallery {
   border: none;
   border-radius: 0;
   box-shadow: none;
+  background: var(--bg);
   --g: 180px;
 }
 
@@ -890,6 +996,7 @@ dialog.gallery[open] {
   align-items: center;
   gap: 8px;
   padding: 8px 10px 8px 16px;
+  background: var(--bar);
   border-bottom: 1px solid var(--border);
 }
 
@@ -970,7 +1077,7 @@ dialog label.gallery-size {
   min-width: 0;
   padding: 6px;
   border: 2px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: none;
   text-align: left;
 }
@@ -980,8 +1087,9 @@ dialog label.gallery-size {
 }
 
 .gallery-tile.current {
-  border-color: var(--accent);
-  background: var(--hover);
+  border-color: var(--accent-tint);
+  background: var(--accent-tint);
+  color: var(--accent-tint-text);
 }
 
 .gallery-tile img {
@@ -1017,9 +1125,9 @@ dialog label.gallery-size {
   z-index: 1000;
   min-width: 200px;
   padding: 4px;
-  background: var(--bar);
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
 }
 .ctx-menu button {
@@ -1030,7 +1138,7 @@ dialog label.gallery-size {
   gap: 16px;
   padding: 7px 10px;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--radius);
   background: none;
   color: var(--text);
   font: inherit;
