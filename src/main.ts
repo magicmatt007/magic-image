@@ -313,11 +313,11 @@ if (import.meta.env.DEV) Object.assign(window, { ed, files }); // for debugging
 // when nothing is being edited; otherwise the status bar offers an update
 // button, so unsaved annotations are never lost to a reload.
 let swRegistration: ServiceWorkerRegistration | undefined;
-const updateSW = registerSW({
+registerSW({
   immediate: true,
   onNeedRefresh() {
     if (!ed.base) {
-      updateSW(true);
+      switchToNewVersion();
       return;
     }
     updateReady = true;
@@ -336,5 +336,24 @@ document.addEventListener('visibilitychange', () => {
 async function applyUpdate() {
   if (!(await files.confirmDiscard())) return;
   ed.markSaved(); // already confirmed; don't ask again in beforeunload
-  updateSW(true);
+  switchToNewVersion();
+}
+
+/**
+ * Activate the waiting version and reload into it. The plugin's own updateSW()
+ * only reloads in some cases (not e.g. for a second update found in the same
+ * session), which left the update button doing nothing.
+ */
+async function switchToNewVersion() {
+  const sw = navigator.serviceWorker;
+  const reg = swRegistration ?? (await sw?.getRegistration().catch(() => undefined));
+  const waiting = reg?.waiting;
+  if (!sw || !waiting) {
+    location.reload(); // nothing waiting (already activated): reloading loads it
+    return;
+  }
+  sw.addEventListener('controllerchange', () => location.reload(), { once: true });
+  waiting.postMessage({ type: 'SKIP_WAITING' });
+  // If the hand-over never happens, reload anyway.
+  setTimeout(() => location.reload(), 4000);
 }
