@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>magic-image</title>
     <meta name="description" content="Lightweight image annotator for screenshots and pictures" />
-    <meta name="theme-color" content="#1b1f27" />
+    <meta name="theme-color" content="#f3efea" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#211d19" media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="/icon-web.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
   </head>
@@ -74,13 +75,13 @@
 
     <dialog id="save-tip">
       <form method="dialog">
-        <h2>Why Save downloads a copy</h2>
+        <h2 class="tip-title"><svg class="spark" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2Q12 12 22 12Q12 12 12 22Q12 12 2 12Q12 12 12 2Z" fill="currentColor"/></svg>Why Save downloads a copy</h2>
         <p>
           This browser isn’t allowed to write files on this computer (on company laptops this is usually set by IT),
           so the app can’t replace the original. Save downloads a copy instead, named like
           <code>screenshot-annotated.png</code>.
         </p>
-        <p><strong>To get the copies next to your screenshots:</strong> in <span data-browser></span>’s download settings,
+        <p class="tip-box"><strong>To get the copies next to your screenshots:</strong> in <span data-browser></span>’s download settings,
           set <strong>Location</strong> to your screenshots folder (Change…).</p>
         <div class="row tip-url">
           <code data-url></code>

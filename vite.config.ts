@@ -38,8 +38,8 @@ export default defineConfig(({ mode }) => ({
         name: 'magic-image Web',
         short_name: 'magic-image Web',
         description: 'Lightweight image annotator for screenshots and pictures',
-        theme_color: '#1b1f27',
-        background_color: '#1b1f27',
+        theme_color: '#211d19',
+        background_color: '#211d19',
         display: 'standalone',
         start_url: './',
         scope: './',
@@ -67,7 +67,7 @@ export default defineConfig(({ mode }) => ({
         ],
       } as any,
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         // Handles POSTs from the share target before Workbox's own routing.
         importScripts: ['share-target.js'],
       },

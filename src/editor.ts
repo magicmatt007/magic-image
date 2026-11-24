@@ -64,8 +64,8 @@ export class Editor {
       padding: 4,
       anchorSize: coarsePointer ? 20 : 9,
       anchorCornerRadius: 2,
-      anchorStroke: '#1e88e5',
-      borderStroke: '#1e88e5',
+      anchorStroke: '#7c3aed',
+      borderStroke: '#7c3aed',
       rotateAnchorOffset: coarsePointer ? 40 : 28,
     });
     this.uiLayer.add(this.transformer);
