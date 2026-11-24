@@ -221,7 +221,7 @@ export function buildGallery(ed: Editor, files: FileSession, onQueryChange: () =
       return dlg.open;
     },
     open() {
-      if (!files.folderName || !files.entries.length || dlg.open) return;
+      if (!files.folderName || (!files.entries.length && !files.loading) || dlg.open) return;
       render();
       dlg.showModal();
       const cur = grid.querySelector<HTMLButtonElement>('.gallery-tile.current');
@@ -230,7 +230,11 @@ export function buildGallery(ed: Editor, files: FileSession, onQueryChange: () =
         cur.focus({ preventScroll: true });
       } else {
         body.scrollTop = 0;
-        grid.querySelector<HTMLButtonElement>('.gallery-tile')?.focus();
+        const first = grid.querySelector<HTMLButtonElement>('.gallery-tile');
+        // Still loading: don't leave focus in the search box (phones would
+        // pop up the keyboard).
+        if (first) first.focus();
+        else (document.activeElement as HTMLElement | null)?.blur();
       }
     },
     close() {

@@ -106,9 +106,7 @@ const actions = {
   blank: () => files.openBlank(blankCanvas(1280, 720)),
   close: async () => {
     await files.close();
-    // With a folder open, show its pictures instead of the welcome screen
-    // (unless the side panel already shows them).
-    if (!ed.base && files.entries.length && !panel.open) gallery.open();
+    showFolder();
   },
   copy: () => copyToClipboard(ed),
   save: () => files.save(),
@@ -292,7 +290,44 @@ window.addEventListener('keyup', (e) => {
 });
 window.addEventListener('blur', () => ed.setPanning(false));
 
-files.restoreFolder().then(() => initDesktop(files));
+/**
+ * With a folder open and no picture, show the folder's pictures instead of the
+ * welcome screen (unless the side panel already shows them).
+ */
+function showFolder() {
+  if (!ed.base && !panel.open && (files.entries.length || files.loading)) gallery.open();
+}
+
+// Start in the folder used last time. If a picture arrives meanwhile (shared
+// to the app, or opened with it), that picture wins and the gallery closes.
+let startupGallery = false;
+files.onChange(() => {
+  if (startupGallery && ed.base) gallery.close();
+  if (ed.base || !gallery.isOpen) startupGallery = false;
+});
+files
+  .restoreFolder(() => {
+    showFolder();
+    startupGallery = gallery.isOpen;
+  })
+  .then(() => initDesktop(files));
+
+// If the browser wants permission again, offer the folder on the welcome screen.
+const reopenBtn = document.createElement('button');
+reopenBtn.type = 'button';
+reopenBtn.className = 'primary';
+reopenBtn.addEventListener('click', () => files.reconnect(showFolder));
+empty.querySelector('.empty-actions')!.prepend(reopenBtn);
+const emptyOpenBtn = empty.querySelector<HTMLButtonElement>('[data-act=open]')!;
+const syncReopen = () => {
+  const dir = files.pendingDir;
+  reopenBtn.hidden = !dir;
+  if (dir) reopenBtn.textContent = `Open “${dir.name}”`;
+  // Only one main (blue) button.
+  emptyOpenBtn.classList.toggle('primary', !dir);
+};
+files.onChange(syncReopen);
+syncReopen();
 
 /** An image shared to the installed app (see public/share-target.js). */
 async function receiveShared() {
