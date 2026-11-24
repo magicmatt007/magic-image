@@ -104,7 +104,12 @@ const actions = {
   },
   fitContent: () => ed.fitToContent(),
   blank: () => files.openBlank(blankCanvas(1280, 720)),
-  close: () => files.close(),
+  close: async () => {
+    await files.close();
+    // With a folder open, show its pictures instead of the welcome screen
+    // (unless the side panel already shows them).
+    if (!ed.base && files.entries.length && !panel.open) gallery.open();
+  },
   copy: () => copyToClipboard(ed),
   save: () => files.save(),
   saveAs: () => files.saveAs(),
