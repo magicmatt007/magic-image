@@ -463,7 +463,10 @@ export class FileSession {
   private async readFolder(dir: FileSystemDirectoryHandle) {
     const current = () => this.reading?.dir === dir && this.dir === dir;
     this.loading = true;
-    this.progress = { found: 0, dated: 0 };
+    // Each read counts into its own object: a read that was overtaken by a
+    // newer one (same folder picked again) must not add to the new count.
+    const progress = { found: 0, dated: 0 };
+    this.progress = progress;
     this.emit();
     // Re-render at most a few times a second while counting.
     let shown = performance.now();
@@ -477,8 +480,9 @@ export class FileSession {
       const handles: FileSystemFileHandle[] = [];
       for await (const h of dir.values()) {
         if (h.kind !== 'file' || !IMAGE_RE.test(h.name)) continue;
+        if (!current()) return this.readAbandoned(dir);
         handles.push(h as FileSystemFileHandle);
-        this.progress.found = handles.length;
+        progress.found = handles.length;
         tick();
       }
       // Dates: the desktop layer knows them from the listing. In the browser,
@@ -486,7 +490,7 @@ export class FileSession {
       // round trip, so several run at once.
       let next = 0;
       const worker = async () => {
-        while (next < handles.length) {
+        while (next < handles.length && current()) {
           const fh = handles[next++];
           let modified = (fh as { lastModifiedMs?: number }).lastModifiedMs;
           try {
@@ -497,7 +501,7 @@ export class FileSession {
           // Keep the handle we are editing, so isSameEntry checks stay cheap.
           const same = this.handle?.name === fh.name && (await this.handle.isSameEntry(fh));
           list.push({ name: fh.name, handle: same ? this.handle! : fh, modified });
-          this.progress.dated++;
+          progress.dated++;
           tick();
         }
       };
@@ -505,14 +509,15 @@ export class FileSession {
     } catch (e) {
       if (current()) toast(`Could not read the folder (${errText(e)})`, 'error');
     }
-    if (!current()) {
-      // Another folder was opened meanwhile: its own read reports when done.
-      if (this.reading?.dir === dir) this.loading = false;
-      return;
-    }
+    if (!current()) return this.readAbandoned(dir);
     this.entries = list;
     this.loading = false;
     this.emit();
+  }
+
+  /** A read that was overtaken: the newer read (if any) reports when done. */
+  private readAbandoned(dir: FileSystemDirectoryHandle) {
+    if (this.reading?.dir === dir) this.loading = false;
   }
 
   /** Index of the current file in the visible (filtered, sorted) list, or -1. */
