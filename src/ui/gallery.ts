@@ -82,7 +82,11 @@ export function buildGallery(ed: Editor, files: FileSession, onQueryChange: () =
   } catch {
     /* ignore */
   }
-  const applySize = () => dlg.style.setProperty('--g', px + 'px');
+  const applySize = () => {
+    dlg.style.setProperty('--g', px + 'px');
+    // Phones: the slider picks 3, 2 or 1 per row (pixel sizes barely differ there).
+    dlg.style.setProperty('--cols', String(px < 160 ? 3 : px < 260 ? 2 : 1));
+  };
   size.value = String(px);
   applySize();
   size.addEventListener('input', () => {
