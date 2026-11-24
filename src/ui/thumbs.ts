@@ -1,4 +1,4 @@
-import { entryHandle, type FileEntry } from '../files';
+import { entryHandle, folderKey, type FileEntry } from '../files';
 
 /** Thumbnail URLs, shared by the folder panel and the gallery. */
 const thumbCache = new Map<string, Promise<string>>();
@@ -33,21 +33,47 @@ const storeUrl = (folder: string, e: FileEntry) =>
   `${location.origin}/__thumbs/${encodeURIComponent(folder)}/${encodeURIComponent(e.name)}/${e.modified}`;
 const folderPrefix = (folder: string) => `${location.origin}/__thumbs/${encodeURIComponent(folder)}/`;
 const openStore = () => (self.caches ? caches.open(STORE).catch(() => null) : Promise.resolve(null));
+/** Thumbnails are kept for the last few folders only, so they don't pile up. */
+const KEEP_FOLDERS = 3;
+const RECENT_KEY = 'image-magic.thumbFolders';
+function recentFolders(folder: string): string[] {
+  let list: string[] = [];
+  try {
+    list = JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]');
+  } catch {
+    /* ignore */
+  }
+  list = [folder, ...list.filter((f) => f !== folder)].slice(0, KEEP_FOLDERS);
+  try {
+    localStorage.setItem(RECENT_KEY, JSON.stringify(list));
+  } catch {
+    /* ignore */
+  }
+  return list;
+}
 
 async function storedThumb(e: FileEntry): Promise<string> {
   if (!e.dir) return '';
-  const res = await (await openStore())?.match(storeUrl(e.dir.name, e)).catch(() => undefined);
+  const res = await (await openStore())?.match(storeUrl(folderKey(e.dir), e)).catch(() => undefined);
   return res ? URL.createObjectURL(await res.blob()) : '';
 }
 
-/** Forget stored thumbnails of pictures no longer in the folder (or changed). */
+/**
+ * Forget stored thumbnails of pictures no longer in the folder (or changed),
+ * and those of folders not used lately.
+ */
 export async function pruneThumbs(folder: string, entries: FileEntry[]) {
   const store = await openStore();
   if (!store) return;
   const keep = new Set(entries.map((e) => storeUrl(folder, e)));
   const prefix = folderPrefix(folder);
-  for (const req of await store.keys().catch(() => [] as readonly Request[]))
-    if (req.url.startsWith(prefix) && !keep.has(req.url)) store.delete(req).catch(() => {});
+  const others = recentFolders(folder)
+    .filter((f) => f !== folder)
+    .map(folderPrefix);
+  for (const req of await store.keys().catch(() => [] as readonly Request[])) {
+    const stale = req.url.startsWith(prefix) ? !keep.has(req.url) : !others.some((p) => req.url.startsWith(p));
+    if (stale) store.delete(req).catch(() => {});
+  }
 }
 
 async function makeThumb(e: FileEntry): Promise<string> {
@@ -63,7 +89,7 @@ async function makeThumb(e: FileEntry): Promise<string> {
   if (!blob) throw new Error('thumbnail could not be encoded');
   if (e.dir) {
     const res = new Response(blob, { headers: { 'content-type': 'image/jpeg' } });
-    (await openStore())?.put(storeUrl(e.dir.name, e), res).catch(() => {});
+    (await openStore())?.put(storeUrl(folderKey(e.dir), e), res).catch(() => {});
   }
   return URL.createObjectURL(blob);
 }

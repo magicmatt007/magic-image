@@ -99,12 +99,28 @@ export async function entryHandle(e: FileEntry) {
   return (e.handle ??= await e.dir!.getFileHandle(e.name));
 }
 
+/**
+ * What tells folders apart: the full path in the desktop app; in the browser
+ * only the name is known (the remembered folder handle is compared as well).
+ */
+export const folderKey = (dir: FileSystemDirectoryHandle) => (dir as { path?: string }).path ?? dir.name;
+
 /** The folder's list as remembered from last time (names and dates only). */
 interface SavedListing {
   folder: string;
+  /** Browser only: the folder itself, so two folders with the same name are not mixed up. */
+  handle?: FileSystemDirectoryHandle;
   entries: { name: string; modified: number }[];
 }
 const LISTING_KEY = 'listing';
+
+/** Last time's list, if it belongs to this folder. */
+async function savedListing(dir: FileSystemDirectoryHandle) {
+  const saved = await idbGet<SavedListing>(LISTING_KEY);
+  if (!saved || saved.folder !== folderKey(dir)) return null;
+  if (saved.handle && !(await saved.handle.isSameEntry(dir).catch(() => false))) return null;
+  return saved;
+}
 
 export class FileSession {
   /** File currently being edited (null for pasted/dropped-without-handle images). */
@@ -517,8 +533,8 @@ export class FileSession {
     // is a slow round trip, so only new files are looked up. A file saved by
     // this app updates its date itself (see touch()).
     const known = new Map<string, number>();
-    const saved = await idbGet<SavedListing>(LISTING_KEY);
-    if (saved?.folder === dir.name) for (const e of saved.entries) known.set(e.name, e.modified);
+    const saved = await savedListing(dir);
+    if (saved) for (const e of saved.entries) known.set(e.name, e.modified);
     // The list on screen is newer still (it is this folder's, or empty).
     for (const e of this.entries) known.set(e.name, e.modified);
     // Re-render at most a few times a second while counting (not while the
@@ -530,6 +546,8 @@ export class FileSession {
       this.emit();
     };
     const list: FileEntry[] = [];
+    /** Entries whose date came from memory: checked once the list is shown. */
+    const unchecked: FileEntry[] = [];
     let failed = false;
     try {
       const handles: FileSystemFileHandle[] = [];
@@ -547,7 +565,9 @@ export class FileSession {
       const worker = async () => {
         while (next < handles.length && current()) {
           const fh = handles[next++];
-          let modified = (fh as { lastModifiedMs?: number }).lastModifiedMs ?? known.get(fh.name);
+          let modified = (fh as { lastModifiedMs?: number }).lastModifiedMs;
+          const remembered = modified === undefined && known.has(fh.name);
+          modified ??= known.get(fh.name);
           try {
             modified ??= (await fh.getFile()).lastModified;
           } catch {
@@ -555,7 +575,9 @@ export class FileSession {
           }
           // Keep the handle we are editing, so isSameEntry checks stay cheap.
           const same = this.handle?.name === fh.name && (await this.handle.isSameEntry(fh));
-          list.push({ name: fh.name, handle: same ? this.handle! : fh, modified, dir });
+          const entry: FileEntry = { name: fh.name, handle: same ? this.handle! : fh, modified, dir };
+          list.push(entry);
+          if (remembered) unchecked.push(entry);
           progress.dated++;
           tick();
         }
@@ -571,15 +593,46 @@ export class FileSession {
     // An incomplete list is shown, but not remembered or used for clean-up.
     if (!failed) {
       this.saveListing();
-      pruneThumbs(dir.name, list);
+      pruneThumbs(folderKey(dir), list);
     }
+    this.emit();
+    if (unchecked.length) void this.checkDates(dir, list, unchecked);
+  }
+
+  /**
+   * Dates taken from memory may be out of date when another program changed a
+   * picture. They are checked after the list is shown, so the start stays quick.
+   */
+  private async checkDates(dir: FileSystemDirectoryHandle, list: FileEntry[], todo: FileEntry[]) {
+    const current = () => this.dir === dir && this.entries === list;
+    let changed = false;
+    let next = 0;
+    const worker = async () => {
+      while (next < todo.length && current()) {
+        const e = todo[next++];
+        try {
+          const modified = (await e.handle!.getFile()).lastModified;
+          if (modified !== e.modified) {
+            e.modified = modified;
+            changed = true;
+          }
+        } catch {
+          /* deleted meanwhile: the next refresh drops it */
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: 8 }, worker));
+    if (!changed || !current()) return;
+    this.visibleCache = null; // the date sort may change
+    this.saveListing();
+    pruneThumbs(folderKey(dir), list);
     this.emit();
   }
 
   /** Show last time's list right away; the next read brings it up to date. */
   private async showSavedListing(dir: FileSystemDirectoryHandle) {
-    const saved = await idbGet<SavedListing>(LISTING_KEY);
-    if (saved?.folder !== dir.name || this.dir !== dir || this.entries.length) return;
+    const saved = await savedListing(dir);
+    if (!saved || this.dir !== dir || this.entries.length) return;
     this.entries = saved.entries.map((e) => ({ ...e, dir }));
     this.emit();
   }
@@ -588,7 +641,9 @@ export class FileSession {
   private saveListing() {
     if (!this.dir || this.basic) return;
     const listing: SavedListing = {
-      folder: this.dir.name,
+      folder: folderKey(this.dir),
+      // The desktop app's folders are known by their path (and can't be stored).
+      handle: platform.rememberDir ? undefined : this.dir,
       entries: this.entries.map(({ name, modified }) => ({ name, modified })),
     };
     idbSet(LISTING_KEY, listing);

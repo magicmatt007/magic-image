@@ -109,6 +109,11 @@ export class TauriDirHandle {
     for (const e of entries) yield new TauriFileHandle(e.path, e.modified_ms);
   }
 
+  /** A file in this folder (used for the list remembered from last time). */
+  async getFileHandle(name: string) {
+    return new TauriFileHandle(`${this.path}${sep(this.path)}${name}`);
+  }
+
   async queryPermission() {
     return 'granted' as const;
   }
