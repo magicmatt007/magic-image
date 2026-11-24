@@ -13,7 +13,8 @@ import { copyToClipboard, shareImage } from './io';
 import { buildFilePanel } from './ui/filePanel';
 import { buildGallery } from './ui/gallery';
 import { setupSaveTip } from './ui/saveTip';
-import { TOOL_KEYS, buildStyleBar, buildToolbar } from './ui/toolbar';
+import { TOOL_KEYS, buildStyleBar, buildToolbar, canShareFiles } from './ui/toolbar';
+import { setupContextMenu } from './ui/contextMenu';
 import { toast } from './ui/toast';
 import { versionLabel } from './version';
 
@@ -127,6 +128,11 @@ const actions = {
 };
 
 buildToolbar($('#toolbar'), ed, actions);
+setupContextMenu($('#stage'), ed, () => [
+  { label: 'Copy image', hint: 'Ctrl+Shift+C', run: actions.copy },
+  { label: 'Save as…', hint: 'Ctrl+Shift+S', run: actions.saveAs },
+  ...(canShareFiles() ? [{ label: 'Share…', run: actions.share }] : []),
+]);
 buildStyleBar($('#stylebar'), ed);
 setupInputs(files, workspace);
 
