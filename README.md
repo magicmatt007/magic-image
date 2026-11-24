@@ -120,7 +120,7 @@ The app isn't code-signed, so Windows SmartScreen may warn on first start: choos
 
 **Updates:** the installed app (version 0.7.0 or later) checks GitHub for a new release at startup and every few hours. When there is one, the status bar shows **Version x.y.z available – install**: it asks about unsaved changes, downloads the new installer, installs it and restarts. Updates are signed, and the app only accepts updates signed with this project's key. The portable exe doesn't update itself; download the new one from the Releases page. Versions before 0.7.0 have no updater, so install 0.7.0 by hand once.
 
-**Releasing:** push a tag such as `v0.4.0`. `.github/workflows/desktop.yml` then builds on Windows and publishes the release with both files.
+**Releasing:** run `npm run bump -- 0.9.0` (it sets the version in package.json, package-lock.json, Cargo.toml and Cargo.lock), commit, and get it onto `main`, usually by merging a pull request. `.github/workflows/desktop.yml` sees the new version, creates the tag `v0.9.0`, builds on Windows and publishes the release with both files. No one needs to push a tag, so this works from cloud sessions too.
 
 **Building and running it locally** (Linux shown; see the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for other systems):
 

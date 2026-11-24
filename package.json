@@ -11,6 +11,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "icons": "node scripts/make-icons.mjs",
+    "bump": "node scripts/bump-version.mjs",
     "dev:desktop": "vite --mode desktop --port 1420 --strictPort",
     "build:desktop": "tsc --noEmit && vite build --mode desktop",
     "tauri": "tauri",
