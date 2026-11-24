@@ -6,6 +6,24 @@ const thumbCache = new Map<string, Promise<string>>();
 const thumbReady = new Map<string, string>();
 const thumbKey = (e: FileEntry) => `${e.name}|${e.modified}`;
 
+/**
+ * Decoding a full-size screenshot is slow on phones; doing dozens at once makes
+ * every thumbnail late. A few at a time, in the order they scrolled into view.
+ */
+const MAX_PARALLEL = 3;
+let running = 0;
+const waiting: (() => void)[] = [];
+async function limited<T>(fn: () => Promise<T>): Promise<T> {
+  if (running >= MAX_PARALLEL) await new Promise<void>((r) => waiting.push(r));
+  running++;
+  try {
+    return await fn();
+  } finally {
+    running--;
+    waiting.shift()?.();
+  }
+}
+
 async function makeThumb(e: FileEntry): Promise<string> {
   const file = e.file ?? (await e.handle!.getFile());
   // Tall enough to stay sharp in the gallery's largest tiles.
@@ -22,7 +40,7 @@ export function thumbFor(e: FileEntry) {
   const key = thumbKey(e);
   let p = thumbCache.get(key);
   if (!p) {
-    p = makeThumb(e)
+    p = limited(() => makeThumb(e))
       .then((src) => (thumbReady.set(key, src), src))
       .catch(() => '');
     thumbCache.set(key, p);
@@ -43,7 +61,11 @@ export function lazyThumbs(root: HTMLElement) {
         if (!it.isIntersecting) continue;
         const img = it.target as ThumbImg;
         io.unobserve(img);
-        if (img.entry) thumbFor(img.entry).then((src) => src && (img.src = src));
+        if (img.entry)
+          thumbFor(img.entry).then((src) => {
+            if (src) img.src = src;
+            else img.classList.add('thumb-failed'); // stop the loading pulse
+          });
       }
     },
     { root, rootMargin: '300px' },

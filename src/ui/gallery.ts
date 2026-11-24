@@ -166,7 +166,7 @@ export function buildGallery(ed: Editor, files: FileSession, onQueryChange: () =
     const focusedName = (document.activeElement as HTMLElement | null)?.dataset?.name;
     grid.replaceChildren();
     if (!visible.length) {
-      grid.append(el('p', 'gallery-empty', files.query ? `No images match “${files.query}”.` : 'No images in this folder.'));
+      grid.append(el('p', 'gallery-empty', files.query ? `No images match “${files.query}”.` : files.loading ? 'Reading folder…' : 'No images in this folder.'));
       return;
     }
     // Date headings only make sense when the list is in date order.

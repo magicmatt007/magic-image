@@ -383,6 +383,7 @@ export class FileSession {
       const images = all.filter((f) => IMAGE_RE.test(f.name) && f.webkitRelativePath.split('/').length === 2);
       if (!all.length) return;
       this.dir = null;
+      this.loading = false;
       this.basic = true;
       this.folderError = null;
       this.folderName = all[0].webkitRelativePath.split('/')[0] || 'Folder';
@@ -395,6 +396,8 @@ export class FileSession {
   }
 
   async useFolder(dir: FileSystemDirectoryHandle) {
+    // Don't show the previous folder's images while the new one loads.
+    if (dir !== this.dir) this.entries = [];
     this.dir = dir;
     this.folderName = dir.name;
     this.basic = false;
@@ -437,26 +440,78 @@ export class FileSession {
     }
   }
 
+  /** True while the folder is being read (the list may still be empty). */
+  loading = false;
+  /** Images found so far while loading, and how many have their date read. */
+  progress = { found: 0, dated: 0 };
+  private reading: { dir: FileSystemDirectoryHandle; done: Promise<void> } | null = null;
+
   /** Re-read the folder (order and filtering happen in `visible`). */
-  async refresh() {
-    if (!this.dir || this.basic) return;
+  refresh(): Promise<void> {
+    const dir = this.dir;
+    if (!dir || this.basic) return Promise.resolve();
+    // A read of this folder is already running (e.g. focus event right after opening).
+    if (this.reading?.dir === dir) return this.reading.done;
+    const reading = { dir, done: this.readFolder(dir) };
+    this.reading = reading;
+    reading.done.finally(() => {
+      if (this.reading === reading) this.reading = null;
+    });
+    return reading.done;
+  }
+
+  private async readFolder(dir: FileSystemDirectoryHandle) {
+    const current = () => this.reading?.dir === dir && this.dir === dir;
+    this.loading = true;
+    this.progress = { found: 0, dated: 0 };
+    this.emit();
+    // Re-render at most a few times a second while counting.
+    let shown = performance.now();
+    const tick = () => {
+      if (performance.now() - shown < 250 || !current()) return;
+      shown = performance.now();
+      this.emit();
+    };
     const list: FileEntry[] = [];
     try {
-      for await (const h of this.dir.values()) {
+      const handles: FileSystemFileHandle[] = [];
+      for await (const h of dir.values()) {
         if (h.kind !== 'file' || !IMAGE_RE.test(h.name)) continue;
-        const fh = h as FileSystemFileHandle;
-        // The desktop layer already knows the date from the folder listing;
-        // in the browser, getFile() is cheap (it doesn't read the contents).
-        const known = (fh as { lastModifiedMs?: number }).lastModifiedMs;
-        const modified = known ?? (await fh.getFile()).lastModified;
-        // Keep the handle we are editing, so isSameEntry checks stay cheap.
-        const same = this.handle && (await this.handle.isSameEntry(fh));
-        list.push({ name: h.name, handle: same ? this.handle! : fh, modified });
+        handles.push(h as FileSystemFileHandle);
+        this.progress.found = handles.length;
+        tick();
       }
+      // Dates: the desktop layer knows them from the listing. In the browser,
+      // getFile() doesn't read the contents, but on Android each call is a slow
+      // round trip, so several run at once.
+      let next = 0;
+      const worker = async () => {
+        while (next < handles.length) {
+          const fh = handles[next++];
+          let modified = (fh as { lastModifiedMs?: number }).lastModifiedMs;
+          try {
+            modified ??= (await fh.getFile()).lastModified;
+          } catch {
+            continue; // deleted meanwhile, or unreadable
+          }
+          // Keep the handle we are editing, so isSameEntry checks stay cheap.
+          const same = this.handle?.name === fh.name && (await this.handle.isSameEntry(fh));
+          list.push({ name: fh.name, handle: same ? this.handle! : fh, modified });
+          this.progress.dated++;
+          tick();
+        }
+      };
+      await Promise.all(Array.from({ length: 8 }, worker));
     } catch (e) {
-      toast(`Could not read the folder (${errText(e)})`, 'error');
+      if (current()) toast(`Could not read the folder (${errText(e)})`, 'error');
+    }
+    if (!current()) {
+      // Another folder was opened meanwhile: its own read reports when done.
+      if (this.reading?.dir === dir) this.loading = false;
+      return;
     }
     this.entries = list;
+    this.loading = false;
     this.emit();
   }
 

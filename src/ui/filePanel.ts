@@ -117,7 +117,11 @@ export function buildFilePanel(panel: HTMLElement, ed: Editor, files: FileSessio
     head.append(title);
     if (files.folderName) {
       if (files.entries.length) head.append(iconButton('grid', 'Show all as gallery (Ctrl+G)', openGallery));
-      if (!files.basic) head.append(iconButton('refresh', 'Refresh list', () => files.refresh()));
+      if (!files.basic) {
+        const r = iconButton('refresh', files.loading ? 'Reading folder…' : 'Refresh list', () => files.refresh());
+        r.classList.toggle('spinning', files.loading);
+        head.append(r);
+      }
       head.append(
         iconButton('folder', 'Open another folder', () => (files.basic ? files.pickFolderBasic() : files.pickFolder())),
       );
@@ -165,7 +169,14 @@ export function buildFilePanel(panel: HTMLElement, ed: Editor, files: FileSessio
       panel.append(el('p', 'panel-note', 'Basic mode: Save downloads an -annotated copy. Reopen the folder to see new files.'));
 
     if (!files.entries.length) {
-      panel.append(el('p', 'panel-note', 'No images in this folder.'));
+      if (files.loading) {
+        const box = el('div', 'panel-loading');
+        box.setAttribute('role', 'status');
+        box.append(el('span', 'spinner'), el('span', '', loadingText()));
+        panel.append(box);
+      } else {
+        panel.append(el('p', 'panel-note', 'No images in this folder.'));
+      }
       return;
     }
 
@@ -181,11 +192,19 @@ export function buildFilePanel(panel: HTMLElement, ed: Editor, files: FileSessio
     }
   }
 
+  function loadingText() {
+    const { found, dated } = files.progress;
+    if (!found) return 'Reading folder…';
+    if (!dated) return `Reading folder… ${found} images found`;
+    return `Reading folder… ${dated} of ${found} images`;
+  }
+
   /** Rebuild only the list (and count) from the filtered, sorted entries. */
   function renderList() {
     const visible = files.visible;
     const total = files.entries.length;
     count.textContent = files.query ? `${visible.length} of ${total} images` : `${total} image${total === 1 ? '' : 's'}`;
+    if (files.loading) count.textContent += ' · updating…';
     listHost.replaceChildren();
 
     if (!visible.length) {
