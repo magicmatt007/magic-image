@@ -395,7 +395,7 @@ export class FileSession {
     input.click();
   }
 
-  async useFolder(dir: FileSystemDirectoryHandle) {
+  async useFolder(dir: FileSystemDirectoryHandle, openNewest = true) {
     // Don't show the previous folder's images while the new one loads.
     if (dir !== this.dir) this.entries = [];
     this.dir = dir;
@@ -408,35 +408,50 @@ export class FileSession {
     else idbSet('lastDir', dir);
     await this.refresh();
     // Open the newest image if nothing is being edited yet.
-    if (!this.ed.base && this.entries.length) await this.openEntry(this.visible[0]);
+    if (openNewest && !this.ed.base && this.entries.length) await this.openEntry(this.visible[0]);
   }
 
-  /** On startup: reconnect the folder used last time (silently if allowed). */
-  async restoreFolder() {
+  /**
+   * On startup: reconnect the folder used last time (silently if allowed).
+   * `onConnected` runs as soon as the folder starts loading.
+   */
+  async restoreFolder(onConnected?: () => void) {
     if (!folderSupported) return;
     const dir = platform.restoreDir ? platform.restoreDir() : await idbGet<FileSystemDirectoryHandle>('lastDir');
     if (!dir) return;
     if (await hasPermission(dir, 'read', false)) {
       this.dir = dir;
       this.folderName = dir.name;
-      await this.refresh();
+      const done = this.refresh();
+      onConnected?.();
+      await done;
     } else {
       this.pendingDir = dir;
       this.emit();
     }
   }
 
-  /** Needs a click (user gesture) to show the permission prompt. */
-  async reconnect() {
+  /**
+   * Needs a click (user gesture) to show the permission prompt. Resolves true
+   * once the folder is connected; `onConnected` runs as soon as it starts loading.
+   */
+  async reconnect(onConnected?: () => void): Promise<boolean> {
     const dir = this.pendingDir;
-    if (!dir) return;
+    if (!dir) return false;
     try {
-      if (await hasPermission(dir, 'read', true)) await this.useFolder(dir);
-      else toast('Permission to the folder was not granted', 'error');
+      if (!(await hasPermission(dir, 'read', true))) {
+        toast('Permission to the folder was not granted', 'error');
+        return false;
+      }
+      const done = this.useFolder(dir, false);
+      onConnected?.();
+      await done;
+      return true;
     } catch {
       this.pendingDir = null;
       toast('That folder is no longer available', 'error');
       this.emit();
+      return false;
     }
   }
 
