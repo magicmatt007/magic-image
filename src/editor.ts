@@ -6,6 +6,51 @@ import { PointHandles } from './handles';
 import { cropCanvas, extendCanvas, flipCanvas, newCanvas, pixelateCanvas, resizeCanvas, rotateCanvas } from './imageOps';
 import { createTools, type ToolName, type Tools } from './tools';
 
+/** Annotations on the clipboard (as text, so they also paste into another tab). */
+interface AnnotationClip {
+  app: typeof CLIP_APP;
+  /** The picture they were copied from. */
+  picture: string;
+  /** Identifies this copy, to offset repeated pastes. */
+  copy: string;
+  nodes: object[];
+  /** Pixels of pictures placed on top, as data URLs by image id. */
+  images: Record<string, string>;
+}
+const CLIP_APP = 'magic-image/annotations';
+
+function parseClip(text: string): AnnotationClip | null {
+  if (!text.includes(CLIP_APP)) return null;
+  try {
+    const c = JSON.parse(text);
+    return c?.app === CLIP_APP && Array.isArray(c.nodes) && c.nodes.length ? c : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Whether clipboard text holds annotations copied in this app. */
+export const isAnnotationClip = (text: string) => !!parseClip(text);
+
+function canvasFromUrl(url: string) {
+  return new Promise<HTMLCanvasElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = newCanvas(img.naturalWidth, img.naturalHeight);
+      c.getContext('2d')!.drawImage(img, 0, 0);
+      resolve(c);
+    };
+    img.onerror = () => reject(new Error('image could not be read'));
+    img.src = url;
+  });
+}
+
+function unionRect(rects: { x: number; y: number; width: number; height: number }[]) {
+  const x = Math.min(...rects.map((r) => r.x)), y = Math.min(...rects.map((r) => r.y));
+  const r = Math.max(...rects.map((r) => r.x + r.width)), b = Math.max(...rects.map((r) => r.y + r.height));
+  return { x, y, width: r - x, height: b - y };
+}
+
 /** Touch screens (phones, tablets): bigger handles and hit areas. */
 export const coarsePointer = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
 
@@ -50,6 +95,10 @@ export class Editor {
   private nextBaseId = 1;
   /** Pixels of pasted pictures, by id (kept for undo/redo for the whole session). */
   private imageStore = new Map<string, HTMLCanvasElement>();
+  /** Changes with every picture opened, so a paste knows whether it came from this one. */
+  private pictureId = '';
+  /** How often each copied set was pasted into each picture (each paste lands a bit further). */
+  private pasteCounts = new Map<string, number>();
   private listeners = new Set<() => void>();
   private dragOrigin = new Map<Konva.Node, Vec>();
   private commitTimer = 0;
@@ -437,6 +486,76 @@ export class Editor {
     this.commit(clones);
   }
 
+  /**
+   * The selected annotations as text for the clipboard (null if none).
+   * Pictures placed on top carry their pixels, so they paste anywhere.
+   */
+  copySelected(): string | null {
+    const sel = this.selected();
+    if (!sel.length) return null;
+    this.tools.text.finish();
+    const images: Record<string, string> = {};
+    for (const n of sel) {
+      const id = n.getAttr('imageId');
+      const c = kindOf(n) === 'image' && this.imageById(id);
+      if (c) images[id] = c.toDataURL('image/png');
+    }
+    const clip: AnnotationClip = {
+      app: CLIP_APP,
+      picture: this.pictureId,
+      copy: Math.random().toString(36).slice(2),
+      // In stacking order, so the copies stack the same way.
+      nodes: this.annoLayer.getChildren().filter((n) => sel.includes(n)).map((n) => n.toObject()),
+      images,
+    };
+    return JSON.stringify(clip);
+  }
+
+  /**
+   * Paste annotations copied with copySelected(). Into the same picture they
+   * land a little offset (further with each paste), elsewhere where they were;
+   * if that is outside the picture, in the middle of the view.
+   */
+  async pasteAnnotations(text: string) {
+    const clip = parseClip(text);
+    if (!clip || !this.base) return false;
+    this.settle();
+    if (this.toolName !== 'select') this.setTool('select');
+    for (const [id, url] of Object.entries(clip.images)) {
+      if (!this.imageById(id)) this.imageStore.set(id, await canvasFromUrl(url));
+    }
+    const same = clip.picture === this.pictureId;
+    const key = `${clip.copy}|${this.pictureId}`;
+    const count = this.pasteCounts.get(key) ?? 0;
+    this.pasteCounts.set(key, count + 1);
+    const step = (count + (same ? 1 : 0)) * (16 / this.scale);
+    const nodes = clip.nodes.map((obj) => {
+      const n = Konva.Node.create(obj) as Konva.Shape;
+      reviveNode(this, n);
+      n.position({ x: n.x() + step, y: n.y() + step });
+      return n;
+    });
+    let below = this.annoLayer.getChildren().filter((n) => kindOf(n) === 'image').length;
+    for (const n of nodes) {
+      this.annoLayer.add(n);
+      // Pictures stay below arrows, text and other annotations.
+      if (kindOf(n) === 'image') n.zIndex(below++);
+    }
+    // Not visible in this picture at all: move them to the middle of the view.
+    const box = unionRect(nodes.map((n) => n.getClientRect({ relativeTo: this.annoLayer, skipShadow: true })));
+    if (box.x > this.width || box.y > this.height || box.x + box.width < 0 || box.y + box.height < 0) {
+      const s = this.scale;
+      const mid = { x: (this.stage.width() / 2 - this.stage.x()) / s, y: (this.stage.height() / 2 - this.stage.y()) / s };
+      const dx = mid.x - (box.x + box.width / 2), dy = mid.y - (box.y + box.height / 2);
+      for (const n of nodes) n.position({ x: n.x() + dx, y: n.y() + dy });
+    }
+    this.updateDraggable();
+    this.updateHitWidths();
+    this.select(nodes);
+    this.commit(nodes);
+    return true;
+  }
+
   reorderSelected(toFront: boolean) {
     const sel = this.selected();
     if (!sel.length) return;
@@ -463,6 +582,7 @@ export class Editor {
     this.select([]);
     this.annoLayer.destroyChildren();
     this.setBase(canvas);
+    this.pictureId = Math.random().toString(36).slice(2);
     this.fileName = name?.replace(/\.[^.]+$/, '') || 'image';
     this.fit();
     this.history.reset();
