@@ -4,7 +4,7 @@ import { initDesktop, isTauri } from './platform/tauri';
 import { platform } from './platform/hooks';
 import './ui/styles.css';
 import { registerSW } from 'virtual:pwa-register';
-import { Editor } from './editor';
+import { Editor, isAnnotationClip } from './editor';
 import { FileSession, folderUsable, setupInputs } from './files';
 import { coarsePointer } from './editor';
 import { blankCanvas } from './imageOps';
@@ -67,6 +67,14 @@ fileInput.addEventListener('change', () => {
 async function pasteButton(asNew = false) {
   try {
     for (const item of await navigator.clipboard.read()) {
+      if (item.types.includes('text/plain')) {
+        const text = await (await item.getType('text/plain')).text();
+        if (isAnnotationClip(text)) {
+          if (ed.base) ed.pasteAnnotations(text);
+          else toast('Open a picture to paste the annotations into', 'error');
+          return;
+        }
+      }
       const type = item.types.find((t) => t.startsWith('image/'));
       if (!type) continue;
       const blob = await item.getType(type);
@@ -131,8 +139,29 @@ const actions = {
 };
 
 buildToolbar($('#toolbar'), ed, actions);
+async function copyAnnotations(cut: boolean) {
+  const text = ed.copySelected();
+  if (!text) return;
+  const n = ed.selected().length;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    toast('Copying is not allowed here. Try Ctrl+C', 'error');
+    return;
+  }
+  if (cut) ed.deleteSelected();
+  toast(`${cut ? 'Cut' : 'Copied'} ${n === 1 ? 'annotation' : `${n} annotations`}`);
+}
+
 setupContextMenu($('#stage'), ed, () => [
-  { label: 'Copy image', hint: 'Ctrl+Shift+C', run: actions.copy },
+  ...(ed.selected().length
+    ? [
+        { label: ed.selected().length === 1 ? 'Copy annotation' : 'Copy annotations', hint: 'Ctrl+C', run: () => copyAnnotations(false) },
+        { label: ed.selected().length === 1 ? 'Cut annotation' : 'Cut annotations', hint: 'Ctrl+X', run: () => copyAnnotations(true) },
+      ]
+    : []),
+  { label: 'Paste', hint: 'Ctrl+V', run: actions.paste },
+  { label: 'Copy image', hint: ed.selected().length ? 'Ctrl+Shift+C' : 'Ctrl+C', run: actions.copy },
   { label: 'Save as…', hint: 'Ctrl+Shift+S', run: actions.saveAs },
   ...(canShareFiles() ? [{ label: 'Share…', run: actions.share }] : []),
 ]);
@@ -218,6 +247,39 @@ window.addEventListener('beforeunload', (e) => {
   if (ed.dirty) e.preventDefault();
 });
 
+// ------------------------------------------------- copy & paste annotations
+// Ctrl+C / Ctrl+X with annotations selected puts them on the clipboard as
+// text; Ctrl+V pastes them (also into another picture or another tab).
+// Without a selection, Ctrl+C copies the whole picture (see the keys below).
+const clipboardFree = () =>
+  !isTyping(document.activeElement) && !document.querySelector('dialog[open]') && !window.getSelection()?.toString();
+
+for (const type of ['copy', 'cut'] as const) {
+  document.addEventListener(type, (e) => {
+    if (!clipboardFree() || !e.clipboardData) return;
+    const text = ed.copySelected();
+    if (!text) return;
+    e.clipboardData.setData('text/plain', text);
+    e.preventDefault();
+    const n = ed.selected().length;
+    if (type === 'cut') ed.deleteSelected();
+    toast(`${type === 'cut' ? 'Cut' : 'Copied'} ${n === 1 ? 'annotation' : `${n} annotations`}`);
+  });
+}
+
+document.addEventListener('paste', (e) => {
+  if (!clipboardFree()) return;
+  const text = e.clipboardData?.getData('text/plain') ?? '';
+  if (!isAnnotationClip(text)) return;
+  e.preventDefault();
+  files.pasteAsNewUntil = 0;
+  if (!ed.base) {
+    toast('Open a picture to paste the annotations into', 'error');
+    return;
+  }
+  ed.pasteAnnotations(text);
+});
+
 // --------------------------------------------------------------- keyboard
 const isTyping = (t: EventTarget | null) =>
   t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement;
@@ -249,6 +311,9 @@ window.addEventListener('keydown', (e) => {
       else if (k === 'a') {
         ed.setTool('select');
         ed.select(ed.annoLayer.getChildren().slice());
+      } else if ((k === 'c' || k === 'x') && !e.shiftKey && ed.selected().length && !window.getSelection()?.toString()) {
+        // Selected annotations: let the browser's copy/cut event through (handled below).
+        return false;
       } else if (k === 'c' && (e.shiftKey || !window.getSelection()?.toString())) copyToClipboard(ed);
       else if (k === '0') ed.fit();
       else if (k === '1') ed.actualSize();

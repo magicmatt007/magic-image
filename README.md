@@ -18,7 +18,7 @@ A lightweight image annotator for screenshots and pictures. It runs in any moder
   - see-through highlighter boxes
   - numbered step badges (1, 2, 3 …)
   - pixelate, to hide sensitive content
-- **Edit annotations:** select, move, resize and rotate; box-select; duplicate; change stacking order; delete; restyle (colour, width, text size, fill/outline, dashed).
+- **Edit annotations:** select, move, resize and rotate; box-select; duplicate; copy, cut and paste (also into another picture); change stacking order; delete; restyle (colour, width, text size, fill/outline, dashed).
   - A selected arrow or line shows handles at both ends to move them, and one in the middle: drag it to bend the arrow into a curve, or back onto the line to straighten it.
   - A selected callout has four corner handles that resize its box (the text wraps to the width) and a blue handle on the tip of its tail to move the pointer.
 - **Pick a colour from the picture** with the pipette next to the colours: press, slide to the colour, release. Anything selected takes on the colour too.
@@ -44,13 +44,14 @@ Install it from Chrome on Android (**⋮ → Add to home screen** / **Install ap
 | --- | --- |
 | V A L R E P T K H N B C | Select, Arrow, Line, Rectangle, Ellipse, Pen, Text, Callout, Highlighter, Number step, Blur/pixelate, Crop |
 | I | Pick a colour from the picture (Esc cancels) |
-| Ctrl+V / Ctrl+Shift+V | Add the clipboard picture on top / start a new picture from it |
+| Ctrl+V / Ctrl+Shift+V | Paste copied annotations, or add the clipboard picture on top / start a new picture from it |
 | Ctrl+O / Ctrl+Shift+O | Open file / open folder |
 | Ctrl+B | Show or hide the folder panel |
 | Ctrl+F | Search the open folder by name |
 | Ctrl+G | Show the open folder as a gallery |
 | Page Down / Page Up | Next / previous image in the folder |
-| Ctrl+C (or Ctrl+Shift+C) | Copy the annotated image |
+| Ctrl+C / Ctrl+X | Copy / cut the selected annotations; with nothing selected, Ctrl+C copies the annotated image |
+| Ctrl+Shift+C | Copy the annotated image (even with a selection) |
 | Ctrl+S / Ctrl+Shift+S | Save (over the opened file) / Save as |
 | Ctrl+Z / Ctrl+Shift+Z (Ctrl+Y) | Undo / redo |
 | Del or Backspace | Delete the selection |
