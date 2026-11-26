@@ -370,12 +370,13 @@ files.onChange(() => {
   if (startupGallery && ed.base) gallery.close();
   if (ed.base || !gallery.isOpen) startupGallery = false;
 });
-files
-  .restoreFolder(() => {
-    showFolder();
-    startupGallery = gallery.isOpen;
-  })
-  .then(() => initDesktop(files));
+files.restoreFolder(() => {
+  showFolder();
+  startupGallery = gallery.isOpen;
+});
+// Desktop: the close prompt, "Open with" and drag and drop start right away,
+// not after the remembered folder has been read (slow on network folders).
+initDesktop(files);
 
 // If the browser wants permission again, offer the folder on the welcome screen.
 const reopenBtn = document.createElement('button');

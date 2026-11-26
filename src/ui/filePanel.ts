@@ -21,6 +21,7 @@ export function buildFilePanel(panel: HTMLElement, ed: Editor, files: FileSessio
 
   function setOpen(v: boolean) {
     open = v;
+    shownCurrent = null; // scroll to the open picture when shown again
     panel.hidden = !open;
     document.body.classList.toggle('panel-open', open);
     try {
@@ -192,6 +193,9 @@ export function buildFilePanel(panel: HTMLElement, ed: Editor, files: FileSessio
     }
   }
 
+  /** The open picture the list last scrolled to. */
+  let shownCurrent: string | null = null;
+
   /** Rebuild only the list (and count) from the filtered, sorted entries. */
   function renderList() {
     const visible = files.visible;
@@ -247,7 +251,11 @@ export function buildFilePanel(panel: HTMLElement, ed: Editor, files: FileSessio
       list.append(li);
     });
     listHost.append(list);
-    list.querySelector('.current')?.scrollIntoView({ block: 'nearest' });
+    // Bring the open picture into view when it changes (or the panel opens),
+    // not on every refresh: that would undo the user's scrolling.
+    const currentName = visible[current]?.name ?? null;
+    if (currentName !== shownCurrent) list.querySelector('.current')?.scrollIntoView({ block: 'nearest' });
+    shownCurrent = currentName;
   }
 
   // Re-render on file changes; on editor changes only the dirty marker matters.

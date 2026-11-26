@@ -84,6 +84,8 @@ export class Editor {
   panning = false;
   /** Keep the image fitted when the window resizes, until the user zooms or pans. */
   private autoFit = true;
+  /** The window was resized while text was being typed: fit when typing ends. */
+  private fitPending = false;
 
   private drawing = false;
   /** Active touch points, for two-finger pinch zoom / pan. */
@@ -127,8 +129,17 @@ export class Editor {
     this.applyCursor();
     new ResizeObserver(() => {
       this.stage.size({ width: container.clientWidth, height: container.clientHeight });
-      if (this.autoFit) this.fit();
+      if (!this.autoFit) return;
+      // While text is typed, its box sits over the canvas at a fixed spot:
+      // re-fitting now would move the text away from it. Fit once it's done.
+      if (this.tools.text.editing) this.fitPending = true;
+      else this.fit();
     }).observe(container);
+    this.onChange(() => {
+      if (!this.fitPending || this.tools.text.editing) return;
+      this.fitPending = false;
+      if (this.autoFit) this.fit();
+    });
   }
 
   // ---------------------------------------------------------------- events
@@ -476,10 +487,13 @@ export class Editor {
     const sel = this.selected();
     if (!sel.length) return;
     const offset = 16 / this.scale;
+    let below = this.annoLayer.getChildren().filter((n) => kindOf(n) === 'image').length;
     const clones = sel.map((n) => {
       const c = n.clone({ x: n.x() + offset, y: n.y() + offset }) as Konva.Shape;
       reviveNode(this, c);
       this.annoLayer.add(c);
+      // Pictures stay below arrows, text and other annotations.
+      if (kindOf(c) === 'image') c.zIndex(below++);
       return c;
     });
     this.select(clones);
