@@ -431,7 +431,11 @@ export class FileSession {
     input.click();
   }
 
-  async useFolder(dir: FileSystemDirectoryHandle, openNewest = true) {
+  /**
+   * Open a folder. `onStarted` runs once its list is showing or loading (so a
+   * gallery opened then has something to show).
+   */
+  async useFolder(dir: FileSystemDirectoryHandle, openNewest = true, onStarted?: () => void) {
     // Don't show the previous folder's images while the new one loads.
     if (dir !== this.dir) this.entries = [];
     this.dir = dir;
@@ -443,7 +447,9 @@ export class FileSession {
     if (platform.rememberDir) platform.rememberDir(dir);
     else idbSet('lastDir', dir);
     await this.showSavedListing(dir);
-    await this.refresh();
+    const done = this.refresh();
+    onStarted?.();
+    await done;
     // Open the newest image if nothing is being edited yet.
     if (openNewest && !this.ed.base && this.entries.length) await this.openEntry(this.visible[0]);
   }
@@ -481,9 +487,7 @@ export class FileSession {
         toast('Permission to the folder was not granted', 'error');
         return false;
       }
-      const done = this.useFolder(dir, false);
-      onConnected?.();
-      await done;
+      await this.useFolder(dir, false, onConnected);
       return true;
     } catch {
       this.pendingDir = null;
