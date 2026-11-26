@@ -130,8 +130,9 @@ export function buildGallery(ed: Editor, files: FileSession, onQueryChange: () =
 
   async function pick(e: FileEntry) {
     await files.openEntry(e);
-    // Stay open if the switch was cancelled (unsaved changes) or failed.
-    if (files.visible[files.currentIndex()] === e) dlg.close();
+    // Stay open if the switch was cancelled (unsaved changes) or failed. By
+    // name: a folder re-read meanwhile replaces the list's entries.
+    if (files.visible[files.currentIndex()]?.name === e.name) dlg.close();
   }
 
   /** Arrow keys: left/right step through the list, up/down jump a row. */

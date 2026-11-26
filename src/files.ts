@@ -766,6 +766,8 @@ export function setupInputs(files: FileSession, dropZone: HTMLElement) {
   document.addEventListener('paste', (e) => {
     const el = document.activeElement;
     if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) return;
+    // Not behind a dialog (gallery, "unsaved changes?"): the picture would land unseen.
+    if (document.querySelector('dialog[open]')) return;
     const item = [...(e.clipboardData?.items ?? [])].find((i) => i.kind === 'file' && i.type.startsWith('image/'));
     const file = item?.getAsFile();
     if (!file) return;

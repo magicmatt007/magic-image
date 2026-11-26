@@ -476,10 +476,13 @@ export class Editor {
     const sel = this.selected();
     if (!sel.length) return;
     const offset = 16 / this.scale;
+    let below = this.annoLayer.getChildren().filter((n) => kindOf(n) === 'image').length;
     const clones = sel.map((n) => {
       const c = n.clone({ x: n.x() + offset, y: n.y() + offset }) as Konva.Shape;
       reviveNode(this, c);
       this.annoLayer.add(c);
+      // Pictures stay below arrows, text and other annotations.
+      if (kindOf(c) === 'image') c.zIndex(below++);
       return c;
     });
     this.select(clones);
